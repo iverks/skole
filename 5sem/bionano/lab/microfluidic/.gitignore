@@ -1,0 +1,4 @@
+*.tiff
+*.tiff_metadata.xml
+resultater
+__pycache__
