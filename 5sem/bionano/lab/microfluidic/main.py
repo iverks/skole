@@ -8,6 +8,11 @@ from scipy.signal import lfilter
 from scipy.special import erf
 
 
+def fittefunksjon(x, D_t, c_max, c_min, x_0):
+    c = c_min / 2 - c_min / 2 * erf((x - x_0) / np.sqrt(4 * D_t))
+    return 10 ** (c_max - c)
+
+
 def main():
     files = {
         1: "./resultater/bilde_3_strek_1_768um.csv",
@@ -17,6 +22,7 @@ def main():
     }
     results = {}
     filestorun = [1, 2, 3, 4]
+
     for file in filestorun:
         filename = files[file]
         df = pd.read_csv(filename)
@@ -30,79 +36,24 @@ def main():
         yvals = yvals[idxs]
 
         # # Reverse order of x and y values
-        if file in [2, 3, 4]:
+        if file in [1]:
             xvals = np.max(xvals) - xvals
 
-        # Find middle to let it be x = 0
-        # maxy = np.max(yvals)
-        # miny = np.min(yvals)
-        # midy = miny + ((maxy - miny) / 2)
-        # middle = yvals[(np.abs(yvals - midy)).argmin()]
-        # middle = xvals[yvals == middle]
-        middle = 0
-        if file == 1:
-            middle = 235
-        elif file == 2:
-            middle = 220
-        elif file == 3:
-            middle = 227
-        elif file == 4:
-            middle = 230
-
-        xvals -= middle
-
-        # distance = 768  # um
-        # flow_rate = 20  # ul/s
-        # cross_area = 500 * 75  # um * um
-        # t = distance * cross_area / flow_rate
-        # c = df["Gray_Value"][40]
-
-        cmax = 200
-        cmin = 0
-        if file == 1:
-            cmax = 217
-            cmin = 190
-        elif file == 2:
-            cmax = 230
-            cmin = 188
-        elif file == 3:
-            cmax = 212
-            cmin = 166
-        elif file == 4:
-            cmax = 200
-            cmin = 157
-
-        c = cmax - cmin
-        D = 5
-        t = 1  # ??????
-
-        yvals -= cmin
-
-        def fittefunksjon(x, D):
-            return c / 2 - c / 2 * erf(x / np.sqrt(4 * D * t))
-
         params, _ = curve_fit(f=fittefunksjon, xdata=xvals, ydata=yvals)
-        D = params[0]
-        results[file] = {
-            "xvals": xvals,
-            "yvals": yvals,
-            "D": D,
-            "funcres": fittefunksjon(xvals, D),
-        }
+        results[file] = {"xvals": xvals, "yvals": yvals, "params": params}
+        pprint(params)
 
-        # plt.plot(xvals, yvals)
-        # plt.plot(xvals, fittefunksjon(xvals, D))
-        # plt.show()
     _, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
     axs = [ax1, ax2, ax3, ax4]
     for file in filestorun:
         xvals = results[file]["xvals"]
         yvals = results[file]["yvals"]
+        params = results[file]["params"]
+        D_t, c_max, c_min, x_0 = params
         axs[file - 1].plot(xvals, yvals)
-        axs[file - 1].plot(results[file]["xvals"], results[file]["funcres"])
+        axs[file - 1].plot(xvals, fittefunksjon(xvals, D_t, c_max, c_min, x_0))
         axs[file - 1].set_title(str(file))
     plt.show()
-    pprint({file: res["D"] for file, res in results.items()})
 
 
 def test():
@@ -140,7 +91,13 @@ def test():
     pprint({file: res["D"] for file, res in results.items()})
 
 
+def test2():
+    x = np.linspace(0, 400, 100)
+    plt.plot(fittefunksjon(x, 1e-4, 220, 190, 205))
+    plt.show()
+
+
 if __name__ == "__main__":
     main()
 
-    # test()
+    test2()
