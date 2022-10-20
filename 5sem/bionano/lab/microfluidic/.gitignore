@@ -2,3 +2,4 @@
 *.tiff_metadata.xml
 resultater
 __pycache__
+*.png
