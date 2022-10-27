@@ -1,0 +1,15 @@
+SetCellsize(10e-9,10e-9,10e-9)
+SetGridsize(1024,1024,2)
+
+
+Msat  = 860e3
+Aex   = 13e-12
+alpha = 0.02
+Ku1 = 5e2
+
+setgeom(imageShape("mask.png"))
+saveas(geom,"geometry")
+
+m = randommag()
+relax()
+saveas(m,"magnetization")
