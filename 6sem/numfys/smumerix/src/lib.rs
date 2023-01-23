@@ -4,16 +4,18 @@ use pyo3::prelude::*;
 use pyo3::wrap_pymodule;
 
 mod ex0;
+mod ex1;
 
-// A Rust based numerics library
+/// A Rust based numerics library
 #[pymodule]
 fn smumerix(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pymodule!(preex))?;
     m.add_function(wrap_pyfunction!(main, m)?)?;
+    m.add_class::<ex1::PyEventDrivenGas>()?;
     Ok(())
 }
 
-// Functions needed for pre exercise
+/// Functions needed for pre exercise
 #[pymodule]
 fn preex(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(one_a, m)?)?;

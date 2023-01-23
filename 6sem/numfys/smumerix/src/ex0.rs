@@ -12,7 +12,7 @@ pub fn start_point_sim(num_loops: usize) -> Vec<usize> {
             pos += xi;
             t += 1;
         }
-        if t > 101 {
+        if t > 100 {
             // Very roughly estimate of time to return home because it does not matter for final result
             sims[idx] = t + (pos * 2.5) as usize;
         } else {

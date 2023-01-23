@@ -1,3 +1,5 @@
+import time
+
 import smumerix
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,12 +12,12 @@ def pt1ab():
 
     xs = np.arange(2, 100, dtype=int)
 
-    cross_zero_pdf = smumerix.preex.one_a(1000)
+    cross_zero_pdf = smumerix.preex.one_a(10_000)
     num_ys = cross_zero_pdf[2:100]
     (alpha, k), _ = curve_fit(analytical, xs, num_ys)
 
-    plt.plot(num_ys)
-    plt.plot(analytical(xs, alpha, k))
+    plt.bar(xs, num_ys)
+    plt.plot(xs, analytical(xs, alpha, k), color="orange")
     plt.show()
 
     print(alpha, k)  # approx 1.6
@@ -31,8 +33,8 @@ def pt1cd():
     num_ys = level_cross_pdf[3:300]
 
     (alpha, k), _ = curve_fit(analytical, xs, num_ys)
-    plt.plot(num_ys)
-    plt.plot(analytical(xs, alpha, k))
+    plt.bar(xs, num_ys)
+    plt.plot(xs, analytical(xs, alpha, k), color="orange")
     plt.show()
 
     print(alpha, k)  # approx 0.8
