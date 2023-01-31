@@ -34,7 +34,7 @@ impl PyEventDrivenGas {
         self.lib_edg.step_many(num_steps)
     }
 
-    fn get_positions_sizes(&self) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
+    fn get_positions(&self) -> (Vec<f64>, Vec<f64>) {
         (
             self.lib_edg
                 .particles
@@ -46,12 +46,15 @@ impl PyEventDrivenGas {
                 .iter()
                 .map(|p| p.borrow().x.y)
                 .collect(),
-            self.lib_edg
-                .particles
-                .iter()
-                .map(|p| p.borrow().r)
-                .collect(),
         )
+    }
+
+    fn get_sizes(&self) -> Vec<f64> {
+        self.lib_edg
+            .particles
+            .iter()
+            .map(|p| p.borrow().r)
+            .collect()
     }
 
     fn get_total_energy(&self) -> f64 {
