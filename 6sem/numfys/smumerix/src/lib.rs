@@ -1,3 +1,11 @@
+#[allow(unused)]
+#[macro_use]
+extern crate anyhow;
+
+#[macro_use]
+extern crate approx;
+extern crate nalgebra as na;
+
 use ex0::level_crossing_prob_sim;
 use ex0::start_point_sim;
 use pyo3::prelude::*;

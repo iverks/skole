@@ -1,3 +1,5 @@
+use anyhow::Result;
+use na::{Point2, Vector2};
 use rand::distributions::Uniform;
 use rand::Rng;
 use std::cell::RefCell;
@@ -12,13 +14,11 @@ const MAX_Y: f64 = 1.0;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Particle {
-    px: f64,
-    py: f64,
-    vx: f64,
-    vy: f64,
-    r: f64,
-    m: f64,
-    collision_count: i32,
+    pub x: Point2<f64>,
+    pub v: Vector2<f64>,
+    pub r: f64,
+    pub m: f64,
+    pub collision_count: i32,
 }
 
 impl Eq for Particle {}
@@ -58,37 +58,51 @@ impl Ord for Collision {
 
 pub struct EventDrivenGas {
     pq: BinaryHeap<Collision>,
-    particles: Vec<RefCell<Particle>>,
+    pub particles: Vec<RefCell<Particle>>,
     xi: f64,
-    cur_time: f64,
+    pub cur_time: f64,
+}
+
+fn check_overlap(x: Point2<f64>, r: f64, particles: &Vec<RefCell<Particle>>) -> bool {
+    for particle in particles {
+        let delta_x = particle.borrow().x - x;
+        if delta_x.dot(&delta_x) <= (particle.borrow().r + r).powi(2) {
+            return true;
+        }
+    }
+    false
 }
 
 impl EventDrivenGas {
-    pub fn new() -> Self {
-        EventDrivenGas::new_uniform_v()
+    pub fn new() -> Result<Self> {
+        EventDrivenGas::new_uniform_v(100, 0.04, 0.03)
     }
 
-    pub fn new_uniform_v() -> EventDrivenGas {
+    pub fn new_uniform_v(num_particles: i32, speed: f64, radius: f64) -> Result<Self> {
         let pq = BinaryHeap::new();
         let mut particles = vec![];
         let mut rng = rand::thread_rng();
-        let pos_gen = Uniform::new(MIN_X, MAX_X);
+        let pos_gen = Uniform::new(MIN_X + radius, MAX_X - radius);
         let angle_gen = Uniform::new(0.0, PI);
-        let v_0 = 0.04;
-        let r_0 = 0.03;
-        for _ in 0..100 + 1 {
-            let px = rng.sample(pos_gen);
-            let py = rng.sample(pos_gen);
+        for _ in 0..num_particles {
+            let mut x = Point2::new(rng.sample(pos_gen), rng.sample(pos_gen));
             let angle = rng.sample(angle_gen);
-            let vx = v_0 * angle.cos();
-            let vy = v_0 * angle.sin();
-            let r = r_0;
+            let v = Vector2::new(speed * angle.cos(), speed * angle.sin());
+            let r = radius;
             let m = 1.0;
+            let mut loop_counter = 1;
+
+            while check_overlap(x, r, &particles) {
+                x = Point2::new(rng.sample(pos_gen), rng.sample(pos_gen));
+                loop_counter += 1;
+                if loop_counter > 10_000 {
+                    return Err(anyhow!("Too large or many particles, can't fit"));
+                }
+            }
+
             particles.push(RefCell::new(Particle {
-                px,
-                py,
-                vx,
-                vy,
+                x,
+                v,
                 r,
                 m,
                 collision_count: 0,
@@ -104,7 +118,7 @@ impl EventDrivenGas {
 
         sim.get_initial_collisions();
 
-        return sim;
+        return Ok(sim);
     }
 
     pub fn get_initial_collisions(&mut self) {
@@ -116,41 +130,39 @@ impl EventDrivenGas {
     pub fn time_until_wall(&self, particle_idx: usize) -> (f64, CollisionObject) {
         let particle = self.particles[particle_idx].borrow_mut();
         let x_time_wall = {
-            if particle.vx == 0.0 {
+            if particle.v.x == 0.0 {
                 (f64::INFINITY, CollisionObject::Never)
-            } else if particle.vx > 0.0 {
+            } else if particle.v.x > 0.0 {
                 (
-                    (MAX_X - particle.r - particle.px) / particle.vx,
+                    (MAX_X - particle.r - particle.x.x) / particle.v.x,
                     CollisionObject::WallLeft,
                 )
             } else {
                 (
-                    (MIN_X + particle.r - particle.px) / particle.vx,
+                    (MIN_X + particle.r - particle.x.x) / particle.v.x,
                     CollisionObject::WallRight,
                 )
             }
         };
         let y_time_wall = {
-            if particle.vy == 0.0 {
+            if particle.v.y == 0.0 {
                 (f64::INFINITY, CollisionObject::Never)
-            } else if particle.vy > 0.0 {
+            } else if particle.v.y > 0.0 {
                 (
-                    (MAX_Y - particle.r - particle.py) / particle.vy,
+                    (MAX_Y - particle.r - particle.x.y) / particle.v.y,
                     CollisionObject::WallTop,
                 )
             } else {
                 (
-                    (MIN_Y + particle.r - particle.py) / particle.vy,
+                    (MIN_Y + particle.r - particle.x.y) / particle.v.y,
                     CollisionObject::WallBottom,
                 )
             }
         };
 
-        let mut closest_wall = std::cmp::min_by(x_time_wall, y_time_wall, |x, y| {
+        return std::cmp::min_by(x_time_wall, y_time_wall, |x, y| {
             x.0.partial_cmp(&y.0).expect("impossible to sort")
         });
-        closest_wall.0 += self.cur_time;
-        return closest_wall;
     }
 
     pub fn collide(&mut self, particle_idx: usize, collision_object: CollisionObject) {
@@ -158,38 +170,36 @@ impl EventDrivenGas {
         particle.collision_count += 1;
         match collision_object {
             CollisionObject::WallBottom | CollisionObject::WallTop => {
-                particle.vx *= self.xi;
-                particle.vy *= -self.xi;
+                particle
+                    .v
+                    .component_mul_assign(&Vector2::new(self.xi, -self.xi));
             }
             CollisionObject::WallLeft | CollisionObject::WallRight => {
-                particle.vx *= -self.xi;
-                particle.vy *= self.xi;
+                particle
+                    .v
+                    .component_mul_assign(&Vector2::new(-self.xi, self.xi));
             }
             CollisionObject::Never => unreachable!("Should never collide with never"),
             CollisionObject::Particle(idx) => {
                 let mut other = self.particles[idx].borrow_mut();
-                let delta_vx = particle.vx - other.vx;
-                let delta_vy = particle.vy - other.vy;
-                let delta_x = particle.px - other.px;
-                let delta_y = particle.py - other.py;
+                let delta_v = other.v - particle.v;
+                let delta_x = other.x - particle.x;
                 let r_squared = (particle.r + other.r).powi(2);
 
-                particle.vx += ((1.0 + self.xi)
-                    * (other.m / (particle.m + other.m))
-                    * ((delta_vx * delta_x) / r_squared))
-                    * delta_x;
-                particle.vy += ((1.0 + self.xi)
-                    * (other.m / (particle.m + other.m))
-                    * ((delta_vy * delta_y) / r_squared))
-                    * delta_y;
-                other.vx -= ((1.0 + self.xi)
-                    * (particle.m / (particle.m + other.m))
-                    * ((delta_vx * delta_x) / r_squared))
-                    * delta_x;
-                other.vy -= ((1.0 + self.xi)
-                    * (particle.m / (particle.m + other.m))
-                    * ((delta_vy * delta_y) / r_squared))
-                    * delta_y;
+                let new_particle_v = particle.v
+                    + ((1.0 + self.xi)
+                        * (other.m / (particle.m + other.m))
+                        * ((delta_v.dot(&delta_x)) / r_squared))
+                        * delta_x;
+
+                let new_other_v = other.v
+                    - ((1.0 + self.xi)
+                        * (particle.m / (particle.m + other.m))
+                        * ((delta_v.dot(&delta_x)) / r_squared))
+                        * delta_x;
+
+                particle.v = new_particle_v;
+                other.v = new_other_v;
             }
         }
     }
@@ -199,7 +209,7 @@ impl EventDrivenGas {
         let (wall_time, wall) = self.time_until_wall(particle_idx);
         if wall != CollisionObject::Never {
             self.pq.push(Collision {
-                time: wall_time,
+                time: self.cur_time + wall_time,
                 particles: (particle_idx, wall),
                 collision_counts: (collision_count, 0),
             });
@@ -210,25 +220,24 @@ impl EventDrivenGas {
                 continue;
             }
             let other = other_cell.borrow();
-            let delta_vx = particle.vx - other.vx;
-            let delta_vy = particle.vy - other.vy;
-            let delta_x = particle.px - other.px;
-            let delta_y = particle.py - other.py;
-            let deltaprikk = delta_vx * delta_x + delta_vy * delta_y;
+            let delta_v = particle.v - other.v;
+            let delta_x = particle.x - other.x;
+            let deltaprikk = delta_v.dot(&delta_x);
 
             if deltaprikk >= 0.0 {
                 continue;
             }
 
             let d = deltaprikk.powi(2)
-                - (delta_vx.powi(2) + delta_vy.powi(2))
-                    * (delta_x.powi(2) * delta_y.powi(2) - (particle.r + other.r).powi(2));
+                - delta_v.dot(&delta_v) * (delta_x.dot(&delta_x) - (particle.r + other.r).powi(2));
             if d <= 0.0 {
                 continue;
             }
 
+            let timestep = -(deltaprikk + d.sqrt()) / (delta_v.dot(&delta_v));
+
             self.pq.push(Collision {
-                time: -(deltaprikk + d.sqrt()) / (delta_vx.powi(2) + delta_vy.powi(2)),
+                time: self.cur_time + timestep,
                 particles: (particle_idx, CollisionObject::Particle(idx)),
                 collision_counts: (particle.collision_count, other.collision_count),
             });
@@ -238,8 +247,8 @@ impl EventDrivenGas {
     fn move_particles(&mut self, timestep: f64) {
         for particle_cell in self.particles.iter() {
             let mut particle = particle_cell.borrow_mut();
-            particle.px += particle.vx * timestep;
-            particle.py += particle.vy * timestep;
+            let new_px = particle.x + particle.v * timestep;
+            particle.x = new_px;
         }
     }
 
@@ -260,7 +269,7 @@ impl EventDrivenGas {
         };
         // Move particles until time of collision
         self.move_particles(collision.time - self.cur_time);
-        self.cur_time += collision.time;
+        self.cur_time = collision.time;
         // Do collision speed changes
         self.collide(collision.particles.0, collision.particles.1);
         // Insert new collisions into queue
@@ -276,11 +285,22 @@ impl EventDrivenGas {
             self.step();
         }
     }
+
+    pub fn get_total_energy(&self) -> f64 {
+        self.particles
+            .iter()
+            .map(|prt| (prt.borrow().m, prt.borrow().v.clone()))
+            .map(|(m, v)| m / 2.0 * v.dot(&v))
+            .sum()
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use std::{cell::RefCell, collections::BinaryHeap};
+
+    use na::Point2;
+    use nalgebra::Vector2;
 
     use crate::ex1::edg::{EventDrivenGas, Particle};
 
@@ -289,19 +309,15 @@ mod tests {
         let pq = BinaryHeap::new();
         let particles: Vec<RefCell<Particle>> = vec![
             RefCell::new(Particle {
-                px: 0.5,
-                py: 0.8,
-                vx: 0.0,
-                vy: 0.5,
+                x: Point2::new(0.5, 0.8),
+                v: Vector2::new(0.0, 0.5),
                 r: 0.01,
                 m: 1.0,
                 collision_count: 0,
             }),
             RefCell::new(Particle {
-                px: 0.8,
-                py: 0.5,
-                vx: 0.5,
-                vy: 0.0,
+                x: Point2::new(0.8, 0.5),
+                v: Vector2::new(0.5, 0.0),
                 r: 0.01,
                 m: 1.0,
                 collision_count: 0,
@@ -315,18 +331,16 @@ mod tests {
         };
         edg.get_initial_collisions();
         edg.step_many(2);
-        assert_eq!(edg.particles[0].borrow().vy, -0.5);
-        assert_eq!(edg.particles[1].borrow().vx, -0.5);
+        assert_eq!(edg.particles[0].borrow().v.y, -0.5);
+        assert_eq!(edg.particles[1].borrow().v.x, -0.5);
     }
 
     #[test]
     fn test_one_particle_diagonal() {
         let pq = BinaryHeap::new();
         let particles: Vec<RefCell<Particle>> = vec![RefCell::new(Particle {
-            px: 0.5,
-            py: 0.8,
-            vx: 0.5,
-            vy: 0.5,
+            x: Point2::new(0.5, 0.8),
+            v: Vector2::new(0.5, 0.5),
             r: 0.01,
             m: 1.0,
             collision_count: 0,
@@ -339,8 +353,8 @@ mod tests {
         };
         edg.get_initial_collisions();
         edg.step();
-        assert_eq!(edg.particles[0].borrow().vy, -0.5);
-        assert_eq!(edg.particles[0].borrow().vx, 0.5);
+        assert_eq!(edg.particles[0].borrow().v.y, -0.5);
+        assert_eq!(edg.particles[0].borrow().v.x, 0.5);
     }
 
     #[test]
@@ -349,10 +363,8 @@ mod tests {
         let initial_vy = 0.5;
         let pq = BinaryHeap::new();
         let particles: Vec<RefCell<Particle>> = vec![RefCell::new(Particle {
-            px: 0.5,
-            py: 0.8,
-            vx: initial_vx,
-            vy: initial_vy,
+            x: Point2::new(0.5, 0.8),
+            v: Vector2::new(initial_vx, initial_vy),
             r: 0.01,
             m: 1.0,
             collision_count: 0,
@@ -365,18 +377,16 @@ mod tests {
         };
         edg.get_initial_collisions();
         edg.step_many(4);
-        assert_eq!(edg.particles[0].borrow().vy, initial_vy);
-        assert_eq!(edg.particles[0].borrow().vx, initial_vx);
+        assert_eq!(edg.particles[0].borrow().v.y, initial_vy);
+        assert_eq!(edg.particles[0].borrow().v.x, initial_vx);
     }
 
     #[test]
     fn test_one_particle_inelastic() {
         let pq = BinaryHeap::new();
         let particles: Vec<RefCell<Particle>> = vec![RefCell::new(Particle {
-            px: 0.5,
-            py: 0.8,
-            vx: 0.0,
-            vy: 0.5,
+            x: Point2::new(0.5, 0.8),
+            v: Vector2::new(0.0, 0.5),
             r: 0.01,
             m: 1.0,
             collision_count: 0,
@@ -389,7 +399,7 @@ mod tests {
         };
         edg.get_initial_collisions();
         edg.step();
-        assert_eq!(edg.particles[0].borrow().vy, 0.0);
+        assert_eq!(edg.particles[0].borrow().v.y, 0.0);
     }
 
     #[test]
@@ -397,19 +407,15 @@ mod tests {
         let pq = BinaryHeap::new();
         let particles: Vec<RefCell<Particle>> = vec![
             RefCell::new(Particle {
-                px: 0.3,
-                py: 0.5,
-                vx: 0.5,
-                vy: 0.0,
+                x: Point2::new(0.2, 0.5),
+                v: Vector2::new(0.2, 0.0),
                 r: 0.01,
                 m: 1.0,
                 collision_count: 0,
             }),
             RefCell::new(Particle {
-                px: 0.8,
-                py: 0.5,
-                vx: -0.5,
-                vy: 0.0,
+                x: Point2::new(0.8, 0.5),
+                v: Vector2::new(-0.2, 0.0),
                 r: 0.01,
                 m: 1.0,
                 collision_count: 0,
@@ -423,9 +429,82 @@ mod tests {
         };
         edg.get_initial_collisions();
         edg.step();
-        assert_eq!(edg.particles[0].borrow().vx, -0.5);
-        assert_eq!(edg.particles[0].borrow().vy, 0.0);
-        assert_eq!(edg.particles[1].borrow().vx, 0.5);
-        assert_eq!(edg.particles[1].borrow().vy, 0.0);
+        assert_relative_eq!(edg.particles[0].borrow().v.x, -0.2, epsilon = 1e-10);
+        assert_relative_eq!(edg.particles[1].borrow().v.x, 0.2, epsilon = 1e-10);
+    }
+
+    #[test]
+    fn test_two_particles_right_angle() {
+        let pq = BinaryHeap::new();
+        let particles: Vec<RefCell<Particle>> = vec![
+            RefCell::new(Particle {
+                x: Point2::new(0.2, 0.2),
+                v: Vector2::new(0.2, 0.2),
+                r: 0.01,
+                m: 1.0,
+                collision_count: 0,
+            }),
+            RefCell::new(Particle {
+                x: Point2::new(0.8, 0.2),
+                v: Vector2::new(-0.2, 0.2),
+                r: 0.01,
+                m: 1.0,
+                collision_count: 0,
+            }),
+        ];
+        let mut edg = EventDrivenGas {
+            pq,
+            particles,
+            xi: 1.0,
+            cur_time: 0.0,
+        };
+        edg.get_initial_collisions();
+        println!("PQ: {:?}", edg.pq);
+        edg.step();
+
+        assert_relative_eq!(edg.particles[0].borrow().v.x, -0.2, epsilon = 1e-10);
+        assert_relative_eq!(edg.particles[0].borrow().v.y, 0.2, epsilon = 1e-10);
+        assert_relative_eq!(edg.particles[1].borrow().v.x, 0.2, epsilon = 1e-10);
+        assert_relative_eq!(edg.particles[1].borrow().v.y, 0.2, epsilon = 1e-10);
+    }
+
+    #[test]
+    fn test_two_particles_head_on_zero_xi() {
+        let pq = BinaryHeap::new();
+        let particles: Vec<RefCell<Particle>> = vec![
+            RefCell::new(Particle {
+                x: Point2::new(0.2, 0.5),
+                v: Vector2::new(0.2, 0.0),
+                r: 0.01,
+                m: 1.0,
+                collision_count: 0,
+            }),
+            RefCell::new(Particle {
+                x: Point2::new(0.8, 0.5),
+                v: Vector2::new(-0.2, 0.0),
+                r: 0.01,
+                m: 1.0,
+                collision_count: 0,
+            }),
+        ];
+        let mut edg = EventDrivenGas {
+            pq,
+            particles,
+            xi: 0.0,
+            cur_time: 0.0,
+        };
+        edg.get_initial_collisions();
+        edg.step();
+        assert_relative_eq!(edg.particles[0].borrow().v.x, 0.0, epsilon = 1e-10);
+        assert_relative_eq!(edg.particles[1].borrow().v.x, 0.0, epsilon = 1e-10);
+    }
+    #[test]
+    fn test_many_particles_constant_energy() {
+        let mut edg = EventDrivenGas::new_uniform_v(100, 0.04, 0.03).unwrap();
+        let init_energy = edg.get_total_energy();
+        edg.step_many(100);
+        let final_energy = edg.get_total_energy();
+        println!("Energy diff is {}", final_energy - init_energy);
+        assert_relative_eq!(init_energy, final_energy, epsilon = 1e-3);
     }
 }
