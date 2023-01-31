@@ -1,6 +1,5 @@
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyType};
-
-mod edg;
+use smumerix_core::edg;
 
 #[pyclass(name = "EventDrivenGas", unsendable)]
 pub struct PyEventDrivenGas {

@@ -1,17 +1,11 @@
-#[allow(unused)]
-#[macro_use]
-extern crate anyhow;
-
-#[macro_use]
-extern crate approx;
 extern crate nalgebra as na;
 
-use ex0::level_crossing_prob_sim;
-use ex0::start_point_sim;
 use pyo3::prelude::*;
 use pyo3::wrap_pymodule;
+use smumerix_core::random_walk::{
+    level_crossing_prob_sim, probability_distribution, start_point_sim,
+};
 
-mod ex0;
 mod ex1;
 
 /// A Rust based numerics library
@@ -40,11 +34,11 @@ fn main() -> PyResult<()> {
 #[pyfunction]
 fn one_a(num_loops: usize) -> PyResult<Vec<f64>> {
     let sim_res = start_point_sim(num_loops);
-    Ok(ex0::probability_distribution(&sim_res))
+    Ok(probability_distribution(&sim_res))
 }
 
 #[pyfunction]
 fn one_b(point: f64, num_loops: usize) -> PyResult<Vec<f64>> {
     let sim_res = level_crossing_prob_sim(point, num_loops);
-    Ok(ex0::probability_distribution(&sim_res))
+    Ok(probability_distribution(&sim_res))
 }

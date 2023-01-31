@@ -1,0 +1,6 @@
+[workspace]
+members= [
+    "smumerix-core",
+    "smumerix",
+    "nopy"
+]

@@ -1,17 +1,12 @@
 [package]
-name = "smumerix"
+name = "smumerix-core"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-[lib]
-name = "smumerix"
-crate-type = ["cdylib"]
 
 [dependencies]
-smumerix-core = { path = "../smumerix-core"}
 anyhow = "1.0.68"
 approx = "0.5.1"
 nalgebra = "0.32.1"
-pyo3 = { version = "0.18.0", features = ["extension-module"] }
 rand = "0.8.5"

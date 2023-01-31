@@ -1,5 +1,5 @@
-use anyhow::Result;
-use na::{Point2, Vector2};
+use anyhow::{anyhow, Result};
+use nalgebra::{Point2, Vector2};
 use rand::distributions::Uniform;
 use rand::Rng;
 use std::cell::RefCell;
@@ -35,9 +35,9 @@ pub enum CollisionObject {
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Collision {
-    time: f64,
-    particles: (usize, CollisionObject),
-    collision_counts: (i32, i32),
+    pub time: f64,
+    pub particles: (usize, CollisionObject),
+    pub collision_counts: (i32, i32),
 }
 
 impl Eq for Collision {}
@@ -57,9 +57,9 @@ impl Ord for Collision {
 }
 
 pub struct EventDrivenGas {
-    pq: BinaryHeap<Collision>,
+    pub pq: BinaryHeap<Collision>,
     pub particles: Vec<RefCell<Particle>>,
-    xi: f64,
+    pub xi: f64,
     pub cur_time: f64,
 }
 
@@ -297,12 +297,12 @@ impl EventDrivenGas {
 
 #[cfg(test)]
 mod tests {
+    use approx::assert_relative_eq;
+    use nalgebra::Point2;
+    use nalgebra::Vector2;
     use std::{cell::RefCell, collections::BinaryHeap};
 
-    use na::Point2;
-    use nalgebra::Vector2;
-
-    use crate::ex1::edg::{EventDrivenGas, Particle};
+    use crate::edg::{EventDrivenGas, Particle};
 
     #[test]
     fn test_one_particle_straight_on() {

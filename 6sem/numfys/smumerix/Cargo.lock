@@ -365,7 +365,12 @@ dependencies = [
  "nalgebra",
  "pyo3",
  "rand",
+ "smumerix-core",
 ]
+
+[[package]]
+name = "smumerix-core"
+version = "0.1.0"
 
 [[package]]
 name = "syn"
