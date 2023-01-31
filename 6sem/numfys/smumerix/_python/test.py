@@ -1,7 +1,3 @@
 import smumerix
 
-print(dir(smumerix.EventDrivenGas))
-
-sim = smumerix.EventDrivenGas()
-
-sim.main()
+print(dir(smumerix))
