@@ -293,6 +293,16 @@ impl EventDrivenGas {
             .map(|(m, v)| m / 2.0 * v.dot(&v))
             .sum()
     }
+
+    pub fn get_moved_particle_list(&self, timestep: f64) -> Vec<RefCell<Particle>> {
+        let particles_clone = self.particles.clone();
+        for particle_cell in particles_clone.iter() {
+            let mut particle = particle_cell.borrow_mut();
+            let new_px = particle.x + particle.v * timestep;
+            particle.x = new_px;
+        }
+        return particles_clone;
+    }
 }
 
 #[cfg(test)]
@@ -403,7 +413,7 @@ mod tests {
     }
 
     #[test]
-    fn test_two_particles_head_on() {
+    fn test_two_particles_head_on_x() {
         let pq = BinaryHeap::new();
         let particles: Vec<RefCell<Particle>> = vec![
             RefCell::new(Particle {
@@ -434,7 +444,39 @@ mod tests {
     }
 
     #[test]
-    fn test_two_particles_right_angle() {
+    fn test_two_particles_head_on_y() {
+        let pq = BinaryHeap::new();
+        let particles: Vec<RefCell<Particle>> = vec![
+            RefCell::new(Particle {
+                x: Point2::new(0.5, 0.2),
+                v: Vector2::new(0.0, 0.2),
+                r: 0.01,
+                m: 1.0,
+                collision_count: 0,
+            }),
+            RefCell::new(Particle {
+                x: Point2::new(0.5, 0.8),
+                v: Vector2::new(0.0, -0.2),
+                r: 0.01,
+                m: 1.0,
+                collision_count: 0,
+            }),
+        ];
+        let mut edg = EventDrivenGas {
+            pq,
+            particles,
+            xi: 1.0,
+            cur_time: 0.0,
+        };
+        edg.get_initial_collisions();
+        edg.step();
+
+        assert_relative_eq!(edg.particles[0].borrow().v.y, -0.2, epsilon = 1e-10);
+        assert_relative_eq!(edg.particles[1].borrow().v.y, 0.2, epsilon = 1e-10);
+    }
+
+    #[test]
+    fn test_two_particles_right_angle_b_t() {
         let pq = BinaryHeap::new();
         let particles: Vec<RefCell<Particle>> = vec![
             RefCell::new(Particle {
@@ -466,6 +508,41 @@ mod tests {
         assert_relative_eq!(edg.particles[0].borrow().v.y, 0.2, epsilon = 1e-10);
         assert_relative_eq!(edg.particles[1].borrow().v.x, 0.2, epsilon = 1e-10);
         assert_relative_eq!(edg.particles[1].borrow().v.y, 0.2, epsilon = 1e-10);
+    }
+
+    #[test]
+    fn test_two_particles_right_angle_bl_tr() {
+        let pq = BinaryHeap::new();
+        let particles: Vec<RefCell<Particle>> = vec![
+            RefCell::new(Particle {
+                x: Point2::new(0.2, 0.5),
+                v: Vector2::new(0.2, 0.0),
+                r: 0.01,
+                m: 1.0,
+                collision_count: 0,
+            }),
+            RefCell::new(Particle {
+                x: Point2::new(0.5, 0.2),
+                v: Vector2::new(0.0, 0.2),
+                r: 0.01,
+                m: 1.0,
+                collision_count: 0,
+            }),
+        ];
+        let mut edg = EventDrivenGas {
+            pq,
+            particles,
+            xi: 1.0,
+            cur_time: 0.0,
+        };
+        edg.get_initial_collisions();
+        println!("PQ: {:?}", edg.pq);
+        edg.step();
+
+        assert_relative_eq!(edg.particles[0].borrow().v.x, 0.0, epsilon = 1e-10);
+        assert_relative_eq!(edg.particles[0].borrow().v.y, 0.2, epsilon = 1e-10);
+        assert_relative_eq!(edg.particles[1].borrow().v.x, 0.2, epsilon = 1e-10);
+        assert_relative_eq!(edg.particles[1].borrow().v.y, 0.0, epsilon = 1e-10);
     }
 
     #[test]
@@ -502,9 +579,14 @@ mod tests {
     fn test_many_particles_constant_energy() {
         let mut edg = EventDrivenGas::new_uniform_v(100, 0.04, 0.03).unwrap();
         let init_energy = edg.get_total_energy();
-        edg.step_many(100);
+        edg.step_many(1000);
         let final_energy = edg.get_total_energy();
         println!("Energy diff is {}", final_energy - init_energy);
         assert_relative_eq!(init_energy, final_energy, epsilon = 1e-3);
+    }
+
+    #[test]
+    fn test_nothing() {
+        assert!(true);
     }
 }
