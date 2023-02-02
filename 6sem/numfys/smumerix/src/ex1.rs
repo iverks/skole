@@ -69,6 +69,10 @@ impl PyEventDrivenGas {
         self.lib_edg.get_speeds()
     }
 
+    fn get_masses(&self) -> Vec<f64> {
+        self.lib_edg.particles.iter().map(|p| p.m).collect()
+    }
+
     fn main(&self) -> PyResult<()> {
         println!("Hello from ex1");
         Ok(())
