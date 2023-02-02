@@ -124,6 +124,35 @@ impl EventDrivenGas {
         Ok(sim)
     }
 
+    pub fn new_for_test_4(y: f64) -> EventDrivenGas {
+        let pq = BinaryHeap::new();
+        let particles: Vec<Particle> = vec![
+            Particle {
+                x: Point2::new(0.5, 0.5),
+                v: Vector2::new(0.0, 0.0),
+                r: 0.1,
+                m: 1e6,
+                collision_count: 0,
+            },
+            Particle {
+                x: Point2::new(0.3, 0.5 + y),
+                v: Vector2::new(0.2, 0.0),
+                r: 0.001,
+                m: 1.0,
+                collision_count: 0,
+            },
+        ];
+        let mut edg = EventDrivenGas {
+            pq,
+            particles,
+            xi: 1.0,
+            cur_time: 0.0,
+        };
+
+        edg.get_initial_collisions();
+        edg
+    }
+
     pub fn get_initial_collisions(&mut self) {
         for particle_idx in 0..self.particles.len() {
             self.add_collisions_to_pq(particle_idx);
@@ -221,6 +250,7 @@ impl EventDrivenGas {
                 particle.v = new_particle_v;
                 let mut other = &mut self.particles[idx];
                 other.v = new_other_v;
+                other.collision_count += 1;
             }
         }
     }
@@ -258,8 +288,6 @@ impl EventDrivenGas {
 
             let timestep = -(deltaprikk + d.sqrt()) / (delta_v.dot(&delta_v));
 
-            assert!(timestep > 0.0);
-
             self.pq.push(Collision {
                 time: self.cur_time + timestep,
                 particles: (particle_idx, CollisionObject::Particle(idx)),
@@ -290,6 +318,10 @@ impl EventDrivenGas {
                 break coll;
             }
         };
+        // println!("particles: {:?}", self.particles);
+        // println!("counts: {:?}", collision.collision_counts);
+        // println!("coll {:.2}, cur {:.2}", collision.time, self.cur_time);
+        assert!(collision.time > self.cur_time);
         // Move particles until time of collision
         self.move_particles(collision.time - self.cur_time);
         self.cur_time = collision.time;
@@ -297,6 +329,7 @@ impl EventDrivenGas {
         self.collide(collision.particles.0, collision.particles.1);
         // Insert new collisions into queue
         self.add_collisions_to_pq(collision.particles.0);
+
         match collision.particles.1 {
             CollisionObject::Particle(idx) => self.add_collisions_to_pq(idx),
             _ => (),
@@ -317,12 +350,16 @@ impl EventDrivenGas {
             .sum()
     }
 
-    pub fn get_moved_particles(&self, timestep: f64) -> Vec<Particle> {
-        let mut particles_clone = self.particles.clone();
-        for particle in particles_clone.iter_mut() {
-            let new_px = particle.x + particle.v * timestep;
-            particle.x = new_px;
-        }
-        particles_clone
+    pub fn get_speeds(&self) -> Vec<f64> {
+        self.particles.iter().map(|p| p.v.magnitude()).collect()
     }
+}
+
+pub fn get_moved_particles(particles: &Vec<Particle>, timestep: f64) -> Vec<Particle> {
+    let mut particles_clone = particles.clone();
+    for particle in particles_clone.iter_mut() {
+        let new_px = particle.x + particle.v * timestep;
+        particle.x = new_px;
+    }
+    particles_clone
 }

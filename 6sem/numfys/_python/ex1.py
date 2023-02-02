@@ -1,31 +1,48 @@
-from matplotlib import animation
-from matplotlib.patches import Circle
-from matplotlib.collections import PatchCollection
-from smumerix import EventDrivenGas
 import smumerix
 import matplotlib.pyplot as plt
-import numpy as np
+import json
+from pathlib import Path
+from time import time
 
+curdir = Path(__file__).parent
 
-def plot(edg: EventDrivenGas, ax: plt.Axes):
-    x, y, sizes = edg.get_positions_sizes()
-    patches = []
-    for x1, y1, r in zip(x, y, sizes):
-        patches.append(Circle((x1, y1), r))
-    ax.set_xlim(0, 1)
-    ax.set_ylim(0, 1)
-    ax.set_aspect("equal")
-    ax.add_collection(PatchCollection(patches))
+if True:
+    edg = smumerix.EventDrivenGas.new_uniform_v(5000, 0.04, 0.003)
 
+    initial_speed_dist = edg.get_speeds()
 
-fig = plt.figure()
-ax = fig.gca()
+    with open(curdir / "initial_speed.json", "w") as file:
+        json.dump(initial_speed_dist, file)
 
-edg = smumerix.EventDrivenGas.new_uniform_v(5, 0.04, 0.13)
+    tic = time()
+    edg.step_many(500_000)
 
+    speeds = edg.get_speeds()
+    for _ in range(10):
+        edg.step_many(10_000)
+        speeds += edg.get_speeds()
+    toc = time()
+    print(f"Simulation took {toc - tic} seconds")
 
-def animate(frame):
-    ...
+    with open(curdir / "final_speed.json", "w") as file:
+        json.dump(speeds, file)
+else:
+    with open(curdir / "initial_speed.json", "r") as file:
+        initial_speed_dist = json.load(file)
+    with open(curdir / "final_speed.json", "r") as file:
+        speeds = json.load(file)
 
+fig, (ax1, ax2) = plt.subplots(1, 2)
 
-anim = animation.FuncAnimation(fig, animate)
+ax1.hist(initial_speed_dist, bins=[n * 0.01 + 0.005 for n in range(0, 8)])
+ax1.set_title("Initial speed distribution")
+ax1.set_xlabel("Speed")
+ax1.set_ylabel("Amount of particles")
+
+ax2.hist(speeds, 200)
+ax2.set_title("Final speed distribution")
+ax2.set_xlabel("Speed")
+
+fig.savefig(curdir / "speed_dist_5000p_500000steps.png")
+
+plt.show()

@@ -8,11 +8,12 @@ use opengl_graphics::{GlGraphics, OpenGL};
 use piston::event_loop::{EventSettings, Events};
 use piston::input::{RenderArgs, RenderEvent, UpdateArgs, UpdateEvent};
 use piston::window::WindowSettings;
-use smumerix_core::edg;
+use smumerix_core::edg::{self, get_moved_particles, Particle};
 
 pub struct App {
-    gl: GlGraphics,           // OpenGL drawing backend.
-    edg: edg::EventDrivenGas, // State of the gas
+    gl: GlGraphics,                // OpenGL drawing backend.
+    prev_particles: Vec<Particle>, // prev state of the gas
+    cur_edg: edg::EventDrivenGas,  // State of the gas
     anim_time: f64,
     timestep_time: f64,
 }
@@ -26,12 +27,12 @@ impl App {
         const VECTOR_PINK: [f32; 4] = [0.74, 0.53, 0.55, 1.0];
         let ctx = self.gl.draw_begin(args.viewport());
         clear(BG_GRAY, &mut self.gl);
-        for (_idx, particle) in self
-            .edg
-            .get_moved_particles(self.timestep_time)
-            .iter()
-            .enumerate()
-        {
+        let particles = if true {
+            self.prev_particles.clone()
+        } else {
+            get_moved_particles(&self.prev_particles, self.timestep_time)
+        };
+        for (_idx, particle) in particles.iter().enumerate() {
             let (x, y) = (particle.x.x, particle.x.y);
             let (x, y) = (args.window_size[0] * x, args.window_size[1] * y);
             let square = rectangle::square(0.0, 0.0, 2.0 * particle.r * args.window_size[0]);
@@ -64,16 +65,19 @@ impl App {
         let ts = args.dt * 2.0;
         self.timestep_time += ts;
         self.anim_time += ts;
-        let collision_time = self.edg.pq.peek().unwrap().time;
+        let collision_time = self.cur_edg.cur_time;
         if self.anim_time >= collision_time {
             self.timestep_time = self.anim_time - collision_time;
-            self.edg.step();
+            self.prev_particles = self.cur_edg.particles.clone();
+            self.cur_edg.step();
         }
     }
 }
 
 fn main() {
-    let edg = edg::EventDrivenGas::new_uniform_v(5, 0.04, 0.13).unwrap();
+    let mut edg = edg::EventDrivenGas::new_uniform_v(100, 0.04, 0.03).unwrap();
+    // let mut edg = edg::EventDrivenGas::new_uniform_v(5, 0.04, 0.13).unwrap();
+    // let mut edg = edg::EventDrivenGas::new_for_test_4(-0.1);
     let opengl = OpenGL::V3_2;
 
     // Create a Glutin window.
@@ -83,10 +87,14 @@ fn main() {
         .build()
         .unwrap();
 
+    let prev_particles = edg.particles.clone();
+    edg.step();
+
     // Create a new game and run it.
     let mut app = App {
         gl: GlGraphics::new(opengl),
-        edg,
+        prev_particles,
+        cur_edg: edg,
         anim_time: 0.0,
         timestep_time: 0.0,
     };

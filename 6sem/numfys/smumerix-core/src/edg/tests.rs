@@ -307,47 +307,21 @@ fn test_two_particles_head_on_zero_xi() {
 fn test_many_particles_constant_energy() {
     let mut edg = EventDrivenGas::new_uniform_v(100, 0.04, 0.03).unwrap();
     let init_energy = edg.get_total_energy();
-    edg.step_many(1000);
+    edg.step_many(10000);
     let final_energy = edg.get_total_energy();
-    println!("Energy diff is {}", final_energy - init_energy);
-    assert_relative_eq!(init_energy, final_energy, epsilon = 1e-3);
+    println!("Energy diff is {:+e}", final_energy - init_energy);
+    assert_relative_eq!(init_energy, final_energy, epsilon = 1e-10);
 }
 
 #[test]
 fn test_small_big_x() {
-    fn restart(y: f64) -> EventDrivenGas {
-        let pq = BinaryHeap::new();
-        let particles: Vec<Particle> = vec![
-            Particle {
-                x: Point2::new(0.5, 0.5),
-                v: Vector2::new(0.0, 0.0),
-                r: 0.1,
-                m: 1e6,
-                collision_count: 0,
-            },
-            Particle {
-                x: Point2::new(0.3, 0.5 + y),
-                v: Vector2::new(0.2, 0.0),
-                r: 0.001,
-                m: 1.0,
-                collision_count: 0,
-            },
-        ];
-        EventDrivenGas {
-            pq,
-            particles,
-            xi: 1.0,
-            cur_time: 0.0,
-        }
-    }
-
     // y, angle
     let mut data = Vec::new();
     let x_axis = Vector2::new(1.0, 0.0);
 
     for y in -100..100 {
         let y = y as f64 * 0.001;
-        let mut edg = restart(y);
+        let mut edg = EventDrivenGas::new_for_test_4(y);
         edg.get_initial_collisions();
         edg.step();
         let angle = edg.particles[1].v.angle(&x_axis);

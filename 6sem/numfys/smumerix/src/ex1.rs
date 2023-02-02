@@ -1,8 +1,6 @@
-use std::collections::BinaryHeap;
-
-use nalgebra::{Point2, Vector2};
+use nalgebra::Vector2;
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyType};
-use smumerix_core::edg::{self, EventDrivenGas, Particle};
+use smumerix_core::edg::{self, EventDrivenGas};
 
 #[pyclass(name = "EventDrivenGas", unsendable)]
 pub struct PyEventDrivenGas {
@@ -34,31 +32,7 @@ impl PyEventDrivenGas {
         if !(-0.4 < y && y < 0.4) {
             return Err(PyValueError::new_err("Y should be between -0.4 and 0.4"));
         }
-        let pq = BinaryHeap::new();
-        let particles: Vec<Particle> = vec![
-            Particle {
-                x: Point2::new(0.5, 0.5),
-                v: Vector2::new(0.0, 0.0),
-                r: 0.1,
-                m: 1e6,
-                collision_count: 0,
-            },
-            Particle {
-                x: Point2::new(0.3, 0.5 + y),
-                v: Vector2::new(0.2, 0.0),
-                r: 0.001,
-                m: 1.0,
-                collision_count: 0,
-            },
-        ];
-
-        let mut edg = EventDrivenGas {
-            pq,
-            particles,
-            xi: 1.0,
-            cur_time: 0.0,
-        };
-        edg.get_initial_collisions();
+        let edg = EventDrivenGas::new_for_test_4(y);
 
         Ok(Self { lib_edg: edg })
     }
@@ -89,6 +63,10 @@ impl PyEventDrivenGas {
 
     fn get_total_energy(&self) -> f64 {
         self.lib_edg.get_total_energy()
+    }
+
+    fn get_speeds(&self) -> Vec<f64> {
+        self.lib_edg.get_speeds()
     }
 
     fn main(&self) -> PyResult<()> {
