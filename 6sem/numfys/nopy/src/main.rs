@@ -21,16 +21,18 @@ impl App {
     fn render(&mut self, args: &RenderArgs) {
         use graphics::*;
 
-        const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
-        const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
-        const BLUE: [f32; 4] = [0.0, 0.0, 1.0, 1.0];
+        const BG_GRAY: [f32; 4] = [0.21, 0.21, 0.21, 0.0];
+        const BALL_GREEN: [f32; 4] = [0.20, 0.46, 0.42, 1.0];
+        const VECTOR_PINK: [f32; 4] = [0.74, 0.53, 0.55, 1.0];
         let ctx = self.gl.draw_begin(args.viewport());
-        clear(GREEN, &mut self.gl);
-        for (_idx, particle) in self.edg.particles.iter().enumerate() {
-            let (x, y) = (
-                particle.x.x, // + particle.v.x * self.timestep_time,
-                particle.x.y, // + particle.v.x * self.timestep_time,
-            );
+        clear(BG_GRAY, &mut self.gl);
+        for (_idx, particle) in self
+            .edg
+            .get_moved_particles(self.timestep_time)
+            .iter()
+            .enumerate()
+        {
+            let (x, y) = (particle.x.x, particle.x.y);
             let (x, y) = (args.window_size[0] * x, args.window_size[1] * y);
             let square = rectangle::square(0.0, 0.0, 2.0 * particle.r * args.window_size[0]);
 
@@ -39,13 +41,13 @@ impl App {
                 -particle.r * args.window_size[1],
             );
             // Draw a box rotating around the middle of the screen.
-            ellipse(RED, square, transform, &mut self.gl);
+            ellipse(BALL_GREEN, square, transform, &mut self.gl);
             let (line_to_x, line_to_y) = (
                 particle.v.x * args.window_size[0],
                 particle.v.y * args.window_size[1],
             );
             line(
-                BLUE,
+                VECTOR_PINK,
                 1.0,
                 [0.0, 0.0, line_to_x, line_to_y],
                 transform.trans(
@@ -62,8 +64,9 @@ impl App {
         let ts = args.dt * 2.0;
         self.timestep_time += ts;
         self.anim_time += ts;
-        if self.anim_time >= self.edg.pq.peek().unwrap().time {
-            self.timestep_time = 0.0;
+        let collision_time = self.edg.pq.peek().unwrap().time;
+        if self.anim_time >= collision_time {
+            self.timestep_time = self.anim_time - collision_time;
             self.edg.step();
         }
     }

@@ -54,8 +54,8 @@ impl PartialOrd for Collision {
 
 impl Ord for Collision {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap_or_else(|| panic!("Cannot compare: {} with {}",
-            self.time, other.time))
+        self.partial_cmp(other)
+            .unwrap_or_else(|| panic!("Cannot compare: {} with {}", self.time, other.time))
     }
 }
 
@@ -258,6 +258,8 @@ impl EventDrivenGas {
 
             let timestep = -(deltaprikk + d.sqrt()) / (delta_v.dot(&delta_v));
 
+            assert!(timestep > 0.0);
+
             self.pq.push(Collision {
                 time: self.cur_time + timestep,
                 particles: (particle_idx, CollisionObject::Particle(idx)),
@@ -315,7 +317,7 @@ impl EventDrivenGas {
             .sum()
     }
 
-    pub fn get_moved_particle_list(&self, timestep: f64) -> Vec<Particle> {
+    pub fn get_moved_particles(&self, timestep: f64) -> Vec<Particle> {
         let mut particles_clone = self.particles.clone();
         for particle in particles_clone.iter_mut() {
             let new_px = particle.x + particle.v * timestep;

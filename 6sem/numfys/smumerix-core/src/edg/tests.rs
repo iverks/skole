@@ -108,14 +108,14 @@ fn test_two_particles_head_on_x() {
     let pq = BinaryHeap::new();
     let particles: Vec<Particle> = vec![
         Particle {
-            x: Point2::new(0.2, 0.5),
+            x: Point2::new(0.2 - 0.01, 0.5),
             v: Vector2::new(0.2, 0.0),
             r: 0.01,
             m: 1.0,
             collision_count: 0,
         },
         Particle {
-            x: Point2::new(0.8, 0.5),
+            x: Point2::new(0.8 + 0.01, 0.5),
             v: Vector2::new(-0.2, 0.0),
             r: 0.01,
             m: 1.0,
@@ -129,6 +129,7 @@ fn test_two_particles_head_on_x() {
         cur_time: 0.0,
     };
     edg.get_initial_collisions();
+    assert_relative_eq!(edg.pq.peek().unwrap().time, 0.3 / 0.2, epsilon = 1e-10);
     edg.step();
     assert_relative_eq!(edg.particles[0].v.x, -0.2, epsilon = 1e-10);
     assert_relative_eq!(edg.particles[1].v.x, 0.2, epsilon = 1e-10);
