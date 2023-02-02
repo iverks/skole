@@ -43,9 +43,9 @@ else:
         heavy_speeds = json.load(file)
 
 
-fig, ((ax_1_init, ax_1_after), (ax_2_init, ax_2_after)) = plt.subplots(2, 2)
-ax_1_after.get_shared_x_axes().join(ax_1_after, ax_2_after)
-
+fig, ((ax_1_init, ax_1_after), (ax_2_init, ax_2_after)) = plt.subplots(
+    2, 2, sharex="col"
+)
 
 initial_speed_light = [
     speed for (speed, mass) in zip(initial_speed_dist, masses) if mass < 2.0
@@ -79,7 +79,7 @@ ax_2_after.set_title("Final speed $m=4m_0$")
 ax_2_after.set_xlabel("Speed")
 ax_2_after.legend()
 
-
+fig.tight_layout()
 fig.savefig(curdir / "2_masses_5000p_5000000steps.png")
 
 plt.show()
