@@ -54,7 +54,10 @@ impl PartialOrd for Collision {
 
 impl Ord for Collision {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap()
+        self.partial_cmp(other).expect(&format!(
+            "Cannot compare: {} with {}",
+            self.time, other.time
+        ))
     }
 }
 
@@ -129,8 +132,13 @@ impl EventDrivenGas {
         }
     }
 
-    pub fn time_until_wall(&self, particle_idx: usize) -> (f64, CollisionObject) {
+    pub fn time_until_wall(&self, particle_idx: usize) -> Option<(f64, CollisionObject)> {
         let particle = self.particles[particle_idx];
+
+        if particle.v == Vector2::new(0.0, 0.0) {
+            return None;
+        }
+
         let x_time_wall = {
             if particle.v.x == 0.0 {
                 (f64::INFINITY, CollisionObject::Never)
@@ -162,9 +170,16 @@ impl EventDrivenGas {
             }
         };
 
-        return std::cmp::min_by(x_time_wall, y_time_wall, |x, y| {
-            x.0.partial_cmp(&y.0).expect("impossible to sort")
+        let min = std::cmp::min_by(x_time_wall, y_time_wall, |x, y| {
+            x.0.partial_cmp(&y.0)
+                .expect(&format!("impossible to sort {} and {}", x.0, y.0))
         });
+
+        if min.1 == CollisionObject::Never {
+            panic!("Particle glitched out of bounds");
+        }
+
+        return Some(min);
     }
 
     pub fn collide(&mut self, particle_idx: usize, collision_object: CollisionObject) {
@@ -214,14 +229,15 @@ impl EventDrivenGas {
 
     fn add_collisions_to_pq(&mut self, particle_idx: usize) {
         let collision_count = self.particles[particle_idx].collision_count;
-        let (wall_time, wall) = self.time_until_wall(particle_idx);
-        if wall != CollisionObject::Never {
+
+        if let Some((time, wall)) = self.time_until_wall(particle_idx) {
             self.pq.push(Collision {
-                time: self.cur_time + wall_time,
+                time: self.cur_time + time,
                 particles: (particle_idx, wall),
                 collision_counts: (collision_count, 0),
             });
         }
+
         let particle = self.particles[particle_idx];
         for (idx, other_cell) in self.particles.iter().enumerate() {
             if idx == particle_idx {
@@ -284,7 +300,7 @@ impl EventDrivenGas {
         match collision.particles.1 {
             CollisionObject::Particle(idx) => self.add_collisions_to_pq(idx),
             _ => (),
-        }
+        };
     }
 
     pub fn step_many(&mut self, num_loops: i32) {
