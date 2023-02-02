@@ -20,19 +20,19 @@ pub fn start_point_sim(num_loops: usize) -> Vec<usize> {
         }
     }
 
-    return sims;
+    sims
 }
 
 pub fn probability_distribution(sim_result: &[usize]) -> Vec<f64> {
-    let mut counts = vec![0; *sim_result.iter().max().unwrap() as usize + 1];
+    let mut counts = vec![0; *sim_result.iter().max().unwrap() + 1];
     for num in sim_result {
-        counts[*num as usize] += 1;
+        counts[*num] += 1;
     }
     let probs: Vec<f64> = counts
         .iter()
         .map(|val| *val as f64 / sim_result.len() as f64)
         .collect();
-    return probs;
+    probs
 }
 
 pub fn level_crossing_prob_sim(point: f64, num_loops: usize) -> Vec<usize> {
@@ -54,5 +54,5 @@ pub fn level_crossing_prob_sim(point: f64, num_loops: usize) -> Vec<usize> {
             sims[idx] = t;
         }
     }
-    return sims;
+    sims
 }

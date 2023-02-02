@@ -54,10 +54,8 @@ impl PartialOrd for Collision {
 
 impl Ord for Collision {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).expect(&format!(
-            "Cannot compare: {} with {}",
-            self.time, other.time
-        ))
+        self.partial_cmp(other).unwrap_or_else(|| panic!("Cannot compare: {} with {}",
+            self.time, other.time))
     }
 }
 
@@ -123,7 +121,7 @@ impl EventDrivenGas {
 
         sim.get_initial_collisions();
 
-        return Ok(sim);
+        Ok(sim)
     }
 
     pub fn get_initial_collisions(&mut self) {
@@ -172,14 +170,14 @@ impl EventDrivenGas {
 
         let min = std::cmp::min_by(x_time_wall, y_time_wall, |x, y| {
             x.0.partial_cmp(&y.0)
-                .expect(&format!("impossible to sort {} and {}", x.0, y.0))
+                .unwrap_or_else(|| panic!("impossible to sort {} and {}", x.0, y.0))
         });
 
         if min.1 == CollisionObject::Never {
             panic!("Particle glitched out of bounds");
         }
 
-        return Some(min);
+        Some(min)
     }
 
     pub fn collide(&mut self, particle_idx: usize, collision_object: CollisionObject) {
@@ -312,7 +310,7 @@ impl EventDrivenGas {
     pub fn get_total_energy(&self) -> f64 {
         self.particles
             .iter()
-            .map(|prt| (prt.m, prt.v.clone()))
+            .map(|prt| (prt.m, prt.v))
             .map(|(m, v)| m / 2.0 * v.dot(&v))
             .sum()
     }
@@ -323,6 +321,6 @@ impl EventDrivenGas {
             let new_px = particle.x + particle.v * timestep;
             particle.x = new_px;
         }
-        return particles_clone;
+        particles_clone
     }
 }
