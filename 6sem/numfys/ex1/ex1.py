@@ -9,10 +9,10 @@ curdir = Path(__file__).parent
 edg = smumerix.EventDrivenGas.new_uniform_v(5000, 0.04, 0.003)
 m = edg.get_masses()[0]
 
-if False:
+if True:
     initial_speed_dist = edg.get_speeds()
 
-    with open(curdir / "initial_speed.json", "w") as file:
+    with open(curdir / "cache" / "initial_speed.json", "w") as file:
         json.dump(initial_speed_dist, file)
 
     tic = time()
@@ -25,12 +25,12 @@ if False:
     toc = time()
     print(f"Simulation took {toc - tic} seconds")
 
-    with open(curdir / "final_speed.json", "w") as file:
+    with open(curdir / "cache" / "final_speed.json", "w") as file:
         json.dump(speeds, file)
 else:
-    with open(curdir / "initial_speed.json", "r") as file:
+    with open(curdir / "cache" / "initial_speed.json", "r") as file:
         initial_speed_dist = json.load(file)
-    with open(curdir / "final_speed.json", "r") as file:
+    with open(curdir / "cache" / "final_speed.json", "r") as file:
         speeds = json.load(file)
 
 

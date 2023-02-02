@@ -28,6 +28,20 @@ impl PyEventDrivenGas {
     }
 
     #[classmethod]
+    fn new_uniform_v_different_m(
+        _cls: &PyType,
+        num_particles: i32,
+        speed: f64,
+        radius: f64,
+    ) -> PyResult<Self> {
+        let lib_edg = edg::EventDrivenGas::new_uniform_v_different_m(num_particles, speed, radius);
+        match lib_edg {
+            Ok(lib_edg) => Ok(Self { lib_edg }),
+            Err(_) => Err(PyValueError::new_err("Couldn't generate system")),
+        }
+    }
+
+    #[classmethod]
     fn new_for_test_4(_cls: &PyType, y: f64) -> PyResult<Self> {
         if !(-0.4 < y && y < 0.4) {
             return Err(PyValueError::new_err("Y should be between -0.4 and 0.4"));

@@ -124,6 +124,58 @@ impl EventDrivenGas {
         Ok(sim)
     }
 
+    pub fn new_uniform_v_different_m(num_particles: i32, speed: f64, radius: f64) -> Result<Self> {
+        if num_particles % 2 != 0 {
+            return Err(anyhow!("num_particles must be divisible by 2"));
+        }
+
+        let pq = BinaryHeap::new();
+        let mut particles = vec![];
+        let mut rng = rand::thread_rng();
+        let pos_gen = Uniform::new(MIN_X + radius, MAX_X - radius);
+        let angle_gen = Uniform::new(0.0, PI);
+        for i in 0..num_particles {
+            let mut x = Point2::new(rng.sample(pos_gen), rng.sample(pos_gen));
+            let angle = rng.sample(angle_gen);
+            let v = Vector2::new(speed * angle.cos(), speed * angle.sin());
+            let r = radius;
+            let m_0 = 1.0;
+            let m = if i < num_particles / 2 {
+                m_0
+            } else {
+                4.0 * m_0
+            };
+            let mut loop_counter = 1;
+
+            while check_overlap(x, r, &particles) {
+                x = Point2::new(rng.sample(pos_gen), rng.sample(pos_gen));
+                loop_counter += 1;
+                if loop_counter > 10_000 {
+                    return Err(anyhow!("Too large or many particles, can't fit"));
+                }
+            }
+
+            particles.push(Particle {
+                x,
+                v,
+                r,
+                m,
+                collision_count: 0,
+            });
+        }
+
+        let mut sim = Self {
+            pq,
+            particles,
+            xi: 1.0,
+            cur_time: 0.0,
+        };
+
+        sim.get_initial_collisions();
+
+        Ok(sim)
+    }
+
     pub fn new_for_test_4(y: f64) -> EventDrivenGas {
         let pq = BinaryHeap::new();
         let particles: Vec<Particle> = vec![
