@@ -27,7 +27,6 @@ impl App {
         let ctx = self.gl.draw_begin(args.viewport());
         clear(GREEN, &mut self.gl);
         for (_idx, particle) in self.edg.particles.iter().enumerate() {
-            let particle = particle.borrow();
             let (x, y) = (
                 particle.x.x, // + particle.v.x * self.timestep_time,
                 particle.x.y, // + particle.v.x * self.timestep_time,
