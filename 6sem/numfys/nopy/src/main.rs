@@ -27,7 +27,7 @@ impl App {
         const VECTOR_PINK: [f32; 4] = [0.74, 0.53, 0.55, 1.0];
         let ctx = self.gl.draw_begin(args.viewport());
         clear(BG_GRAY, &mut self.gl);
-        let particles = if true {
+        let particles = if self.prev_particles.len() > 40 {
             self.prev_particles.clone()
         } else {
             get_moved_particles(&self.prev_particles, self.timestep_time)
@@ -75,8 +75,8 @@ impl App {
 }
 
 fn main() {
-    let mut edg = edg::EventDrivenGas::new_uniform_v(100, 0.04, 0.03).unwrap();
-    // let mut edg = edg::EventDrivenGas::new_uniform_v(5, 0.04, 0.13).unwrap();
+    // let mut edg = edg::EventDrivenGas::new_uniform_v(100, 0.04, 0.03).unwrap();
+    let mut edg = edg::EventDrivenGas::new_uniform_v(15, 0.04, 0.05).unwrap();
     // let mut edg = edg::EventDrivenGas::new_for_test_4(-0.1);
     let opengl = OpenGL::V3_2;
 
