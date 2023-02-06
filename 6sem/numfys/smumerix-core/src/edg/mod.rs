@@ -124,7 +124,12 @@ impl EventDrivenGas {
         Ok(sim)
     }
 
-    pub fn new_uniform_v_different_m(num_particles: i32, speed: f64, radius: f64) -> Result<Self> {
+    pub fn new_uniform_v_different_m(
+        num_particles: i32,
+        speed: f64,
+        radius: f64,
+        xi: f64,
+    ) -> Result<Self> {
         if num_particles % 2 != 0 {
             return Err(anyhow!("num_particles must be divisible by 2"));
         }
@@ -167,12 +172,61 @@ impl EventDrivenGas {
         let mut sim = Self {
             pq,
             particles,
-            xi: 1.0,
+            xi,
             cur_time: 0.0,
         };
 
         sim.get_initial_collisions();
 
+        Ok(sim)
+    }
+
+    pub fn new_big_and_small(num_small: i32, speed: f64, radius: f64, xi: f64) -> Result<Self> {
+        let pq = BinaryHeap::new();
+        let mut particles = vec![];
+        let mut rng = rand::thread_rng();
+        let x_gen = Uniform::new(MIN_X + radius, MAX_X - radius);
+        let y_gen = Uniform::new(MIN_Y + radius, MAX_Y / 2.0 - radius);
+        let m_0 = 1.0;
+
+        particles.push(Particle {
+            x: Point2::new(0.5, 0.75),
+            v: Vector2::new(0.0, -speed),
+            r: 5.0 * radius,
+            m: 25.0 * m_0,
+            collision_count: 0,
+        });
+
+        for _ in 0..num_small {
+            let mut x = Point2::new(rng.sample(x_gen), rng.sample(y_gen));
+            let r = radius;
+            let mut loop_counter = 1;
+
+            while check_overlap(x, r, &particles) {
+                x = Point2::new(rng.sample(x_gen), rng.sample(y_gen));
+                loop_counter += 1;
+                if loop_counter > 10_000 {
+                    return Err(anyhow!("Too large or many particles, can't fit"));
+                }
+            }
+
+            particles.push(Particle {
+                x,
+                v: Vector2::new(0.0, 0.0),
+                r,
+                m: m_0,
+                collision_count: 0,
+            });
+        }
+
+        let mut sim = Self {
+            pq,
+            particles,
+            xi,
+            cur_time: 0.0,
+        };
+
+        sim.get_initial_collisions();
         Ok(sim)
     }
 

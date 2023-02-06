@@ -24,10 +24,11 @@ impl App {
 
         const BG_GRAY: [f32; 4] = [0.21, 0.21, 0.21, 0.0];
         const BALL_GREEN: [f32; 4] = [0.20, 0.46, 0.42, 1.0];
+        const BALL_BLUE: [f32; 4] = [0.22, 0.60, 0.84, 1.0];
         const VECTOR_PINK: [f32; 4] = [0.74, 0.53, 0.55, 1.0];
         let ctx = self.gl.draw_begin(args.viewport());
         clear(BG_GRAY, &mut self.gl);
-        let particles = if self.prev_particles.len() > 40 {
+        let particles = if self.prev_particles.len() > 800 {
             self.prev_particles.clone()
         } else {
             get_moved_particles(&self.prev_particles, self.timestep_time)
@@ -41,8 +42,14 @@ impl App {
                 -particle.r * args.window_size[0],
                 -particle.r * args.window_size[1],
             );
+
+            let color = if particle.m < 2.0 {
+                BALL_GREEN
+            } else {
+                BALL_BLUE
+            };
             // Draw a box rotating around the middle of the screen.
-            ellipse(BALL_GREEN, square, transform, &mut self.gl);
+            ellipse(color, square, transform, &mut self.gl);
             let (line_to_x, line_to_y) = (
                 particle.v.x * args.window_size[0],
                 particle.v.y * args.window_size[1],
@@ -76,7 +83,9 @@ impl App {
 
 fn main() {
     // let mut edg = edg::EventDrivenGas::new_uniform_v(100, 0.04, 0.03).unwrap();
-    let mut edg = edg::EventDrivenGas::new_uniform_v(15, 0.04, 0.05).unwrap();
+    // let mut edg = edg::EventDrivenGas::new_uniform_v(15, 0.04, 0.05).unwrap();
+    // let mut edg = edg::EventDrivenGas::new_uniform_v_different_m(20, 0.04, 0.04, 0.9).unwrap();
+    let mut edg = edg::EventDrivenGas::new_big_and_small(100, 0.04, 0.02, 0.5).unwrap();
     // let mut edg = edg::EventDrivenGas::new_for_test_4(-0.1);
     let opengl = OpenGL::V3_2;
 

@@ -28,13 +28,16 @@ impl PyEventDrivenGas {
     }
 
     #[classmethod]
+    #[pyo3(signature = (num_particles, speed, radius, xi=1.0))]
     fn new_uniform_v_different_m(
         _cls: &PyType,
         num_particles: i32,
         speed: f64,
         radius: f64,
+        xi: f64,
     ) -> PyResult<Self> {
-        let lib_edg = edg::EventDrivenGas::new_uniform_v_different_m(num_particles, speed, radius);
+        let lib_edg =
+            edg::EventDrivenGas::new_uniform_v_different_m(num_particles, speed, radius, xi);
         match lib_edg {
             Ok(lib_edg) => Ok(Self { lib_edg }),
             Err(_) => Err(PyValueError::new_err("Couldn't generate system")),
