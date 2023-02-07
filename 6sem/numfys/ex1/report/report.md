@@ -18,4 +18,18 @@ Average speed of heavy particles: 0.028
 
 ![histograms of the speed distributions of both masses](2_masses_5000p_5000000steps.png)
 
+## Problem 3
+
+With 5000 particles and 1500 samples * 625 steps per sample it took about 3 minutes per xi. For xi=1 we got this graph:
+
+![energy development with xi 1](eq_5000particles_1_xi.png)
+
+For xi=0.9 we got this graph:
+
+![energy development with xi 0.9](eq_5000particles_0.9_xi.png)
+
+We can see that for 1 the energy stabilises while for 0.9 the energy falls.
+
+For xi = 0.8 i am getting errors telling me that the timestep is negative 🙄.
+
 
