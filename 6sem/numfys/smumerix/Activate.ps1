@@ -1,0 +1,1 @@
+& ((Split-Path $MyInvocation.MyCommand.Path) + "\venv\Scripts\Activate.ps1")

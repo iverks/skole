@@ -1,6 +1,6 @@
+use crate::core::edg::{self, EventDrivenGas};
 use nalgebra::Vector2;
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyType};
-use smumerix_core::edg::{self, EventDrivenGas};
 
 #[pyclass(name = "EventDrivenGas", unsendable)]
 pub struct PyEventDrivenGas {

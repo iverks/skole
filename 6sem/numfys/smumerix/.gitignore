@@ -1,6 +1,6 @@
 /target
 .env
-smumerix/venv
+venv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

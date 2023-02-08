@@ -3,7 +3,7 @@ use nalgebra::Point2;
 use nalgebra::Vector2;
 use std::collections::BinaryHeap;
 
-use crate::edg::{EventDrivenGas, Particle};
+use crate::core::edg::{EventDrivenGas, Particle};
 
 #[test]
 fn test_one_particle_straight_on() {

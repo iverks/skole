@@ -3,12 +3,14 @@ extern crate graphics;
 extern crate opengl_graphics;
 extern crate piston;
 
+mod core;
+
+use crate::core::edg::{self, get_moved_particles, Particle};
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{GlGraphics, OpenGL};
 use piston::event_loop::{EventSettings, Events};
 use piston::input::{RenderArgs, RenderEvent, UpdateArgs, UpdateEvent};
 use piston::window::WindowSettings;
-use smumerix_core::edg::{self, get_moved_particles, Particle};
 
 pub struct App {
     gl: GlGraphics,                // OpenGL drawing backend.

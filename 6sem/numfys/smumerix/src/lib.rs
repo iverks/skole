@@ -1,11 +1,12 @@
 extern crate nalgebra as na;
 
-use pyo3::prelude::*;
-use pyo3::wrap_pymodule;
-use smumerix_core::random_walk::{
+use crate::core::random_walk::{
     level_crossing_prob_sim, probability_distribution, start_point_sim,
 };
+use pyo3::prelude::*;
+use pyo3::wrap_pymodule;
 
+mod core;
 mod ex1;
 
 /// A Rust based numerics library
