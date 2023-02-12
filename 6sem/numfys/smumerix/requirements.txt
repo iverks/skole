@@ -1,4 +1,0 @@
-maturin
-numpy
-scipy
-matplotlib
